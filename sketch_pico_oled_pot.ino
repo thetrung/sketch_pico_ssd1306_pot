@@ -6,6 +6,8 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+#define LOG false
+
 // only ADC
 #define EC11_B 28 // GPIO 26 (orange)
 #define EC11_A 27 // GPIO 27 (red)
@@ -69,7 +71,7 @@ int frame = 0;
 
 void setup() {
 // CONFIG ::
-  // Serial.begin(115200);     // 115200
+  if(LOG) Serial.begin(115200);     // 115200
   Wire.setClock(100000);
   // analogReadResolution(1024); // 10-bit 
   
@@ -81,17 +83,14 @@ void setup() {
     Serial.println(F("SSD1306 allocation failed"));
     for(;;);
   }
-  // delay(1000);
+  delay(1000);
   display.clearDisplay();       // clear buffer, indeed.
   display.setTextSize(1);
   display.setTextColor(WHITE);
   display.setCursor(20,30);     // center
   display.println("READY.");
-  display.drawPixel(10, 10, SSD1306_WHITE);
   display.display(); 
-  // delay(1000);
 }
-// void loop(){}
 #define MIN_COUNTER 0
 #define MAX_COUNTER 32
 int counter = MAX_COUNTER/2;
@@ -101,14 +100,15 @@ int last_B = 0;
 int read_A = 0;
 int read_B = 0;
 bool was_inc = false;
-#define MIN 6   // most of time will be =< 5
-#define MAX 50
-#define HOLD 50
+#define MIN_A 50   // most of time will be =< 5
+#define MIN_B 50   // most of time will be =< 5
+#define MAX 100
+#define HOLD 25
 int avr_counter = 0; 
-#define AVR_COUNT 4
+#define AVR_COUNT 6
 unsigned long last_read = 0;
 void read_pot(){
-  if(millis() - last_read < 16){return;} 
+  // if(millis() - last_read < 16){return;} 
   int avr_A = 0;
   int avr_B = 0;
   for(int i = 0; i < AVR_COUNT; i++){
@@ -121,7 +121,7 @@ void read_pot(){
   read_A = avr_A / AVR_COUNT;
   read_B = avr_B / AVR_COUNT;
 
-  if(read_B != last_B && read_B < MIN && counter < MAX_COUNTER && read_A - last_A > HOLD) { 
+  if(read_B != last_B && read_B < MIN_B && counter < MAX_COUNTER && read_A - last_A > HOLD) { 
     counter+= was_inc ? 0 : 
     // 1;
     (read_A < 60 ? (
@@ -131,7 +131,7 @@ void read_pot(){
     } 
 
   else {
-    if(read_A != last_A && read_A < MIN && counter > MIN_COUNTER && read_B - last_B > HOLD) { 
+    if(read_A != last_A && read_A < MIN_A && counter > MIN_COUNTER && read_B - last_B > HOLD) { 
     counter-= !was_inc ? 0 : 
     // 1;
     (read_B < 60 ? (
@@ -141,9 +141,14 @@ void read_pot(){
     }
   }
   update_read();
-  last_read = millis();
-}
+  // last_read = millis();
 
+  if(LOG){
+    Serial.print("A | B | counter  :");
+    Serial.print(" " + String(read_A) + " " + String(read_B) + " " + String(counter));
+    Serial.println("");
+  }
+}
 void update_read(){
   last_A = read_A;
   last_B = read_B;
@@ -190,10 +195,7 @@ void loop() {
       display.display();
     last_counter = counter;
     mode_values[current_choice] = counter;
-
-    // Serial.print("A | B | counter  :");
-    // Serial.print(" " + String(read_A) + " " + String(read_B) + " " + String(counter));
-    // Serial.println("");
+    // update screensaver :
     last_idle = millis();
     delay(8);
   } 
